@@ -1,4 +1,4 @@
-const CACHE_NAME = "success-driver-v2";
+const CACHE_NAME = "success-driver-v3";
 const FILES = [
   "./",
   "./index.html",
