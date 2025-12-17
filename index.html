@@ -1,34 +1,615 @@
 <!DOCTYPE html>
 <html lang="en">
-  
-    <link rel="icon" href="./icons/icon-192.png">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#0284c7">
-  
 <head>
-
-
-
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Success Driver</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0284c7">
+  <title>Success Driver Tasks</title>
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <meta name="description" content="Offline-friendly, installable task tracker with a fundraiser-style momentum gauge." />
+  <meta name="theme-color" content="#0284c7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <style>
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #f0f9ff; }
-    h1 { text-align: center; color: #0284c7; }
-    button { padding: 10px; margin: 4px; }
+    :root {
+      color-scheme: light;
+      --sky: #0ea5e9;
+      --sky-dark: #0284c7;
+      --sky-light: #e0f2fe;
+      --ink: #0f172a;
+      --card: #ffffff;
+      --muted: #64748b;
+      --border: #dbeafe;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --shadow: 0 8px 30px rgba(2, 132, 199, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Inter", "SF Pro Text", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, #f5fbff 0, #e0f2fe 35%, #f8fafc 100%);
+      color: var(--ink);
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-align: center;
+      padding: 16px 12px 8px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      color: var(--sky-dark);
+      letter-spacing: -0.02em;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    @media (min-width: 900px) {
+      .grid.two-col {
+        grid-template-columns: 2fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        align-items: center;
+      }
+
+      .thermometer {
+        align-items: flex-start;
+      }
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #fff 0%, #f8fbff 100%);
+    }
+
+    .card span {
+      display: block;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .card strong {
+      font-size: 1.4rem;
+      color: var(--ink);
+    }
+
+    .thermometer {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    .thermometer-bar {
+      position: relative;
+      width: 70px;
+      height: 220px;
+      border-radius: 40px;
+      background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+      border: 2px solid var(--border);
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px rgba(15, 23, 42, 0.08);
+    }
+
+    .thermometer-fill {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0;
+      background: linear-gradient(180deg, #a5e2ff 0%, var(--sky) 60%, var(--sky-dark) 100%);
+      transition: height 0.4s ease, background 0.4s ease;
+    }
+
+    .thermometer-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .thermometer-labels strong { color: var(--ink); }
+
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form .row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form label {
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .form input,
+    .form textarea,
+    .form select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+      font-size: 1rem;
+    }
+
+    .form textarea { resize: vertical; min-height: 72px; }
+
+    .form button {
+      background: var(--sky-dark);
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+      box-shadow: 0 8px 16px rgba(2, 132, 199, 0.25);
+    }
+
+    .form button:active { transform: translateY(1px); box-shadow: 0 6px 12px rgba(2,132,199,0.18); }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 4px;
+    }
+
+    .filters button {
+      background: #e2e8f0;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .filters button.active {
+      background: var(--sky-dark);
+      color: white;
+      border-color: var(--sky-dark);
+    }
+
+    .task-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+
+    .task {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 10px 24px rgba(15, 23, 42, 0.04);
+      display: grid;
+      gap: 8px;
+    }
+
+    .task-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .task-title { font-weight: 700; font-size: 1.05rem; }
+    .task-meta { color: var(--muted); font-size: 0.9rem; }
+
+    .task-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+      background: #eef2ff;
+      color: #4338ca;
+    }
+
+    .pill.success { background: #ecfdf3; color: #0f9f6e; border-color: #bbf7d0; }
+    .pill.warning { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+
+    .task-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ghost-button {
+      background: white;
+      color: var(--ink);
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 24px 8px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+
+    .goal-input {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .goal-input input {
+      max-width: 120px;
+      background: white;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
   </style>
 </head>
 <body>
-  <h1>Success Driver 🎯</h1>
-  <p>This is your installed Success Driver PWA. You’re live.</p>
+  <div class="app">
+    <header>
+      <p class="pill" aria-hidden="true">Offline-first · Installable PWA</p>
+      <h1>Success Driver Task Tracker</h1>
+      <p>Capture tasks, stay focused, and watch your momentum climb like a fundraiser thermometer.</p>
+      <button id="install" class="ghost-button" type="button" style="align-self:center;" hidden>Install app</button>
+    </header>
+
+    <section class="panel">
+      <div class="summary-cards">
+        <div class="card">
+          <span>Planned</span>
+          <strong id="planned-count">0</strong>
+        </div>
+        <div class="card">
+          <span>Active</span>
+          <strong id="active-count">0</strong>
+        </div>
+        <div class="card">
+          <span>Completed</span>
+          <strong id="done-count">0</strong>
+        </div>
+        <div class="card">
+          <span>Next milestone</span>
+          <strong id="next-milestone">–</strong>
+        </div>
+      </div>
+
+      <div class="thermometer" aria-label="Progress thermometer">
+        <div class="thermometer-bar" aria-hidden="true">
+          <div class="thermometer-fill" id="thermometer-fill"></div>
+        </div>
+        <div class="thermometer-labels">
+          <strong id="progress-percent">0% of goal</strong>
+          <span id="progress-caption">Goal: 0 tasks</span>
+          <span>Completed tasks raise the fill. Set a goal that motivates you.</span>
+          <div class="goal-input">
+            <label for="goal" class="sr-only">Set goal</label>
+            <input type="number" id="goal" min="1" step="1" />
+            <button class="ghost-button" id="update-goal">Update goal</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid two-col" style="margin-top: 16px;">
+      <section class="panel">
+        <h2 style="margin-top:0; margin-bottom: 8px;">New task</h2>
+        <form id="task-form" class="form">
+          <div class="row">
+            <label for="title">Title</label>
+            <input id="title" name="title" required maxlength="120" placeholder="Draft launch plan" />
+          </div>
+          <div class="row">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" placeholder="Add steps, links, or acceptance criteria"></textarea>
+          </div>
+          <div class="row">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+              <option value="planned">Planned</option>
+              <option value="active">Active</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="row">
+            <label for="priority">Priority</label>
+            <select id="priority" name="priority">
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <button type="submit">Add task</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div style="display:flex; align-items:center; justify-content: space-between; gap: 8px;">
+          <h2 style="margin:0;">Tasks</h2>
+          <div class="filters" role="group" aria-label="Filter tasks">
+            <button type="button" data-filter="all" class="active">All</button>
+            <button type="button" data-filter="planned">Planned</button>
+            <button type="button" data-filter="active">Active</button>
+            <button type="button" data-filter="done">Done</button>
+          </div>
+        </div>
+        <ul id="task-list" class="task-list" aria-live="polite"></ul>
+      </section>
+    </div>
+  </div>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+    const STORAGE_KEY = "success-driver.tasks.v1";
+
+    const sampleTasks = [
+      { id: "sample-1", title: "Outline weekly priorities", notes: "Focus on high-impact deliverables first.", status: "planned", priority: "high", createdAt: new Date().toISOString() },
+      { id: "sample-2", title: "Ship the installable PWA", notes: "Verify offline cache and manifest.", status: "active", priority: "medium", createdAt: new Date().toISOString() },
+      { id: "sample-3", title: "Celebrate a win", notes: "Share a quick demo with the team.", status: "done", priority: "low", createdAt: new Date().toISOString() }
+    ];
+
+    const state = loadState();
+
+    const els = {
+      form: document.querySelector("#task-form"),
+      title: document.querySelector("#title"),
+      notes: document.querySelector("#notes"),
+      status: document.querySelector("#status"),
+      priority: document.querySelector("#priority"),
+      taskList: document.querySelector("#task-list"),
+      filters: document.querySelectorAll("[data-filter]"),
+      plannedCount: document.querySelector("#planned-count"),
+      activeCount: document.querySelector("#active-count"),
+      doneCount: document.querySelector("#done-count"),
+      progressPercent: document.querySelector("#progress-percent"),
+      progressCaption: document.querySelector("#progress-caption"),
+      progressFill: document.querySelector("#thermometer-fill"),
+      nextMilestone: document.querySelector("#next-milestone"),
+      goalInput: document.querySelector("#goal"),
+      updateGoal: document.querySelector("#update-goal"),
+      install: document.querySelector("#install"),
+    };
+
+    function createId() {
+      if (crypto.randomUUID) return crypto.randomUUID();
+      return "id-" + Math.random().toString(16).slice(2) + Date.now().toString(16);
     }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.warn("Unable to load saved tasks", e);
+      }
+      return { tasks: sampleTasks, filter: "all", goal: 6 };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function addTask(task) {
+      state.tasks.unshift(task);
+      saveState();
+      render();
+    }
+
+    function deleteTask(id) {
+      state.tasks = state.tasks.filter((t) => t.id !== id);
+      saveState();
+      render();
+    }
+
+    function toggleStatus(id) {
+      state.tasks = state.tasks.map((t) => t.id === id ? { ...t, status: t.status === "done" ? "active" : "done" } : t);
+      saveState();
+      render();
+    }
+
+    function setFilter(filter) {
+      state.filter = filter;
+      saveState();
+      render();
+    }
+
+    function renderStats() {
+      const planned = state.tasks.filter((t) => t.status === "planned").length;
+      const active = state.tasks.filter((t) => t.status === "active").length;
+      const done = state.tasks.filter((t) => t.status === "done").length;
+      const total = state.tasks.length || 1;
+
+      els.plannedCount.textContent = planned;
+      els.activeCount.textContent = active;
+      els.doneCount.textContent = done;
+
+      const goal = Math.max(Number(state.goal) || 1, 1);
+      els.goalInput.value = goal;
+      const percent = Math.min(Math.round((done / goal) * 100), 150);
+      els.progressPercent.textContent = `${percent}% of goal`;
+      els.progressCaption.textContent = `Goal: ${goal} task${goal === 1 ? "" : "s"} · ${done} completed`;
+      els.progressFill.style.height = `${Math.min(percent, 150)}%`;
+      els.progressFill.style.background = percent >= 100 ? "linear-gradient(180deg, #befae8 0%, #10b981 60%, #0f9f6e 100%)" : "";
+
+      const remaining = Math.max(goal - done, 0);
+      els.nextMilestone.textContent = remaining === 0 ? "Goal met!" : `${remaining} to go`;
+    }
+
+    function createTaskNode(task) {
+      const li = document.createElement("li");
+      li.className = "task";
+      li.innerHTML = `
+        <div class="task-header">
+          <input type="checkbox" aria-label="Mark task complete" ${task.status === "done" ? "checked" : ""} />
+          <div>
+            <div class="task-title">${task.title}</div>
+            <div class="task-meta">${new Date(task.createdAt).toLocaleDateString()} · Priority ${task.priority}</div>
+          </div>
+        </div>
+        ${task.notes ? `<div class="task-meta">${task.notes}</div>` : ""}
+        <div class="task-actions">
+          <span class="pill ${task.status === "done" ? "success" : task.status === "active" ? "warning" : ""}">${task.status}</span>
+          <div class="task-controls">
+            <button class="ghost-button" data-action="toggle">${task.status === "done" ? "Reopen" : "Complete"}</button>
+            <button class="ghost-button" data-action="delete">Delete</button>
+          </div>
+        </div>
+      `;
+
+      li.querySelector("input[type='checkbox']").addEventListener("change", () => toggleStatus(task.id));
+      li.querySelectorAll("[data-action]").forEach((btn) => {
+        const action = btn.getAttribute("data-action");
+        btn.addEventListener("click", () => {
+          if (action === "toggle") toggleStatus(task.id);
+          if (action === "delete") deleteTask(task.id);
+        });
+      });
+      return li;
+    }
+
+    function renderList() {
+      els.taskList.innerHTML = "";
+      const filtered = state.filter === "all" ? state.tasks : state.tasks.filter((t) => t.status === state.filter);
+      if (!filtered.length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No tasks here yet. Add one to get rolling.";
+        els.taskList.appendChild(empty);
+        return;
+      }
+      filtered.forEach((task) => els.taskList.appendChild(createTaskNode(task)));
+    }
+
+    function renderFilters() {
+      els.filters.forEach((btn) => {
+        const active = btn.dataset.filter === state.filter;
+        btn.classList.toggle("active", active);
+      });
+    }
+
+    function render() {
+      renderStats();
+      renderFilters();
+      renderList();
+    }
+
+    els.form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const title = els.title.value.trim();
+      if (!title) return;
+      const task = {
+        id: createId(),
+        title,
+        notes: els.notes.value.trim(),
+        status: els.status.value,
+        priority: els.priority.value,
+        createdAt: new Date().toISOString(),
+      };
+      addTask(task);
+      els.form.reset();
+      els.status.value = "planned";
+      els.priority.value = "medium";
+      els.title.focus();
+    });
+
+    els.filters.forEach((btn) => btn.addEventListener("click", () => setFilter(btn.dataset.filter)));
+
+    els.updateGoal.addEventListener("click", () => {
+      const newGoal = Math.max(Number(els.goalInput.value) || 1, 1);
+      state.goal = newGoal;
+      saveState();
+      render();
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+
+    let deferredPrompt = null;
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredPrompt = event;
+      els.install?.removeAttribute("hidden");
+    });
+
+    els.install?.addEventListener("click", async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        deferredPrompt = null;
+        els.install.setAttribute("hidden", "true");
+      }
+    });
+
+    window.addEventListener("appinstalled", () => {
+      els.install?.setAttribute("hidden", "true");
+      deferredPrompt = null;
+    });
+
+    render();
   </script>
 </body>
 </html>
