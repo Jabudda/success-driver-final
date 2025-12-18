@@ -1,0 +1,1639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weekly Goal Tracker (Local)</title>
+  <meta name="description" content="Weekly Goal Tracker — plan and review weekly goals stored locally in your browser." />
+  <meta name="theme-color" content="#0ea5e9" />
+  <style>
+    :root{
+      /* blue background: two shades lighter than original */
+      --bg:#10283a; --panel:#0f1b2e; --card:#111f36;
+      --muted:#93a4bf; --text:#e8f0ff; --line:rgba(255,255,255,.08);
+      --accent:#0ea5e9; --good:#22c55e; --warn:#f59e0b; --bad:#ef4444;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:18px; --radius2:14px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:
+        radial-gradient(1200px 700px at 15% 0%, rgba(14,165,233,.20), transparent 60%),
+        radial-gradient(900px 600px at 100% 25%, rgba(34,197,94,.14), transparent 55%),
+        radial-gradient(800px 500px at 40% 100%, rgba(245,158,11,.10), transparent 55%),
+        var(--bg);
+      color:var(--text);
+    }
+    .skip-link{ position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden; }
+    .skip-link:focus{ left:16px; top:16px; width:auto; height:auto; padding:8px 12px; background:var(--card); color:var(--text); border-radius:8px; z-index:1000; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:18px; }
+    header{
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between;
+      flex-wrap:wrap; margin:10px 0 18px;
+    }
+    .title{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; flex:1; }
+    .quote-section{ display:flex; flex-direction:row; align-items:flex-start; gap:12px; }
+    .sand-dial{ width:80px; height:100px; display:inline-block; margin-left:8px; vertical-align:middle; transform-origin: left top; }
+    /* quote styling and fade */
+    .sand-dial.quote{ display:flex; flex-direction:row; align-items:center; justify-content:flex-start; padding:6px 8px; gap:12px; width:100%; }
+    #quoteText{ max-width:800px; font-size:12px; font-weight:bold; line-height:1.15; text-align:left; opacity:0; transform:translateY(6px); transition: opacity .45s ease, transform .45s ease; }
+    #quoteDay{ font-size:11px; color:var(--muted); display:none; }
+    #btnShuffle{ font-size:14px; padding:6px 8px; border-radius:10px; }
+    .badge{
+      width:42px;height:42px;border-radius:14px; display:grid;place-items:center;
+      background:linear-gradient(135deg, rgba(14,165,233,.25), rgba(34,197,94,.20));
+      border:1px solid var(--line); box-shadow: var(--shadow); font-weight:900;
+    }
+    h1{ margin:0; font-size:18px; }
+    .sub{ margin:2px 0 0; color:var(--muted); font-size:13px; }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
+    button, .btn{
+      appearance:none; border:1px solid var(--line); background:rgba(255,255,255,.04);
+      color:var(--text); padding:10px 12px; border-radius:14px; cursor:pointer;
+      transition: transform .06s ease, background .15s ease, border-color .15s ease;
+      font-weight:650; font-size:13px;
+    }
+    button:hover,.btn:hover{ background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.14) }
+    button:active,.btn:active{ transform: translateY(1px) }
+    .primary{
+      background:linear-gradient(135deg, rgba(14,165,233,.75), rgba(14,165,233,.45));
+      border-color: rgba(14,165,233,.55);
+    }
+    .danger{ border-color: rgba(239,68,68,.35); }
+
+    .grid{ display:grid; grid-template-columns: 1.1fr .9fr; gap:14px; align-items:start; }
+    @media (max-width: 980px){ .grid{ grid-template-columns:1fr; } }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+      border:1px solid var(--line); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow:hidden;
+    }
+    .card-h{
+      padding:14px 16px; display:flex; align-items:center; justify-content:space-between;
+      border-bottom:1px solid var(--line); gap:10px;
+    }
+    .card-h strong{ font-size:14px }
+    .card-b{ padding:16px; }
+
+    input, select, textarea{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding:10px 12px;
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      outline:none;
+      font-size:13px;
+    }
+    textarea{ resize:vertical; min-height:44px; }
+
+    .row{ display:grid; grid-template-columns: 1.2fr .9fr .9fr auto; gap:10px; align-items:center; }
+    @media (max-width: 820px){ .row{ grid-template-columns:1fr; gap:8px; } }
+
+    .muted{ color:var(--muted); font-size:12px; }
+    .filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .filters > *{ flex: 1 1 220px; }
+
+    .kpis{ display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; }
+    @media (max-width: 560px){ .kpis{ grid-template-columns:1fr; } }
+    .kpi{
+      background:rgba(17,31,54,.75);
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding:12px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-height:86px;
+    }
+    .kpi .label{ color:var(--muted); font-size:12px }
+    .kpi .value{ font-size:22px; font-weight:850; letter-spacing:.2px }
+    .bar{
+      height:12px; border-radius: 999px;
+      background:rgba(255,255,255,.06); border:1px solid var(--line);
+      overflow:hidden;
+    }
+    .bar > i{
+      display:block; height:100%; width:0%;
+      background:linear-gradient(90deg, rgba(34,197,94,.85), rgba(14,165,233,.75));
+      border-radius:999px;
+    }
+
+    .list{ display:flex; flex-direction:column; gap:10px; }
+    .goal{
+      border:1px solid var(--line);
+      background: rgba(17,31,54,.55);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .goal-top{
+      display:flex; gap:10px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;
+    }
+    .goal h3{ margin:0; font-size:14px; }
+    .goal p{ margin:6px 0 0; color:var(--muted); font-size:12px; white-space:pre-wrap; line-height:1.35; }
+    .meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .pill{
+      font-size:11px; color:var(--muted);
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      padding:4px 8px;
+      border-radius:999px;
+    }
+    .pill.good{ border-color: rgba(34,197,94,.35); color: rgba(170,255,205,.92) }
+    .pill.warn{ border-color: rgba(245,158,11,.35); color: rgba(255,226,170,.95) }
+    .pill.bad{ border-color: rgba(239,68,68,.35); color: rgba(255,190,190,.95) }
+
+    details{
+      margin-top:10px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(255,255,255,.02);
+      overflow:hidden;
+    }
+    summary{
+      cursor:pointer;
+      padding:10px 12px;
+      list-style:none;
+      display:flex; justify-content:space-between; align-items:center;
+      gap:10px;
+      user-select:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .section{
+      padding:12px;
+      border-top:1px solid var(--line);
+      display:grid;
+      gap:10px;
+    }
+    .section .row5{ display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr; gap:10px; }
+    @media (max-width: 900px){ .section .row5{ grid-template-columns:1fr; } }
+    .section .row3{ display:grid; grid-template-columns: 1.2fr 1fr 1fr; gap:10px; }
+    @media (max-width: 820px){ .section .row3{ grid-template-columns:1fr; } }
+
+    .goal-actions{ display:flex; gap:8px; }
+    canvas{ width:100%; height:220px; display:block; }
+    .split{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width: 560px){ .split{ grid-template-columns:1fr; } }
+    .foot{ margin:14px 0 8px; color:var(--muted); font-size:12px; text-align:center; }
+
+    dialog{
+      border:1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(10,18,32,.95);
+      color:var(--text);
+      box-shadow: var(--shadow);
+      width:min(720px, 92vw);
+    }
+    dialog::backdrop{ background: rgba(0,0,0,.55); }
+    .dlg-h{ display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--line); }
+    .dlg-b{ padding:14px 16px; }
+    .dlg-b pre{
+      margin:0; padding:12px;
+      border-radius:14px; border:1px solid var(--line);
+      background: rgba(255,255,255,.03);
+      overflow:auto; max-height: 45vh; font-size:12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <header>
+      <div class="title">
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div class="badge">📅</div>
+          <div>
+            <h1>Weekly Goal Tracker</h1>
+            <div class="sub">Monday Plan • Wednesday Check-in • Friday Recap • Stored Locally</div>
+          </div>
+        </div>
+        <div class="quote-section">
+          <div class="sand-dial quote" id="quoteOfDay" role="note" aria-live="polite" title="Quote of the day">
+            <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+              <div id="quoteText" style="font-size:12px; font-weight:bold; line-height:1.15; max-width:800px;">
+                Inspiring thoughts loading...
+              </div>
+              <div id="quoteDay" style="font-size:11px; color:var(--muted); text-align:left;"></div>
+            </div>
+            <button id="btnShuffle" class="btn primary" style="font-size:14px; padding:6px 8px; white-space:nowrap; margin-left:30px;">Shuffle</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="btnExport">Export JSON</button>
+        <label class="btn" for="fileImport">Import JSON</label>
+        <input id="fileImport" type="file" accept="application/json" style="display:none;" />
+        <button id="btnClear" class="danger">Reset</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <div class="grid">
+      <!-- LEFT: Goals -->
+      <section class="card">
+        <div class="card-h">
+          <strong>Goals (by Week Start)</strong>
+          <span class="muted" id="lastSaved" aria-live="polite" aria-atomic="true">—</span>
+        </div>
+        <div class="card-b">
+          <div class="row" style="margin-bottom:10px;">
+            <div>
+              <label class="muted" for="mTitle">Goal Title</label>
+              <input id="mTitle" placeholder="Goal Title (unique for this Monday/week)" />
+            </div>
+            <div>
+              <label class="muted" for="mWeekStart">Week start</label>
+              <input id="mWeekStart" type="date" />
+            </div>
+            <div>
+              <label class="muted" for="mChampion">Success Driver Champion</label>
+              <input id="mChampion" placeholder="Success Driver Champion" />
+            </div>
+            <div style="display:flex;align-items:end;">
+              <button id="btnAdd" class="primary">Add Monday</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="muted" for="mDesc">Description / high-level overview</label>
+            <textarea id="mDesc" placeholder="Description / high-level overview (Monday)"></textarea>
+          </div>
+
+          <div class="filters" style="margin-top:12px; margin-bottom:12px;">
+            <div>
+              <label class="muted" for="fSearch">Search</label>
+              <input id="fSearch" placeholder="Search title / text…" />
+            </div>
+            <div>
+              <label class="muted" for="fWeek">Week</label>
+              <select id="fWeek">
+                <option value="all">All weeks</option>
+                <option value="this">This week</option>
+                <option value="last">Last week</option>
+              </select>
+            </div>
+            <div>
+              <label class="muted" for="fStatus">Status</label>
+              <select id="fStatus">
+                <option value="all">All statuses</option>
+                <option value="needs_wed">Needs Wednesday</option>
+                <option value="needs_fri">Needs Friday</option>
+                <option value="complete">Mon+Wed+Fri complete</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="list" id="goalList"></div>
+          <div class="muted" id="emptyState" style="display:none; margin-top:10px;">
+            Nothing matches. Either you’re crushing it… or the filters are being dramatic.
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Metrics -->
+      <aside class="card">
+        <div class="card-h">
+          <strong>Visual Metrics</strong>
+          <span class="muted" id="todayTag"></span>
+        </div>
+        <div class="card-b">
+          <div class="kpis" style="margin-bottom:12px;">
+            <div class="kpi">
+              <div class="label">Weekly completion</div>
+              <div class="value" id="kpiCompletion">0%</div>
+              <div class="bar"><i id="barCompletion"></i></div>
+            </div>
+            <div class="kpi">
+              <div class="label">Open checkpoints</div>
+              <div class="value" id="kpiOpen">0</div>
+              <div class="muted" id="kpiHint">—</div>
+            </div>
+            <div class="kpi">
+              <div class="label">Needs adjustment</div>
+              <div class="value" id="kpiAdjust">0</div>
+              <div class="muted">Wed check-ins marked “Yes”</div>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="card" style="border-radius:14px; box-shadow:none;">
+              <div class="card-h" style="border-radius:14px;">
+                <strong style="font-size:13px;">Weekly Progress</strong>
+                <span class="muted" id="donutLabel">—</span>
+              </div>
+              <div class="card-b" style="padding:12px;">
+                <canvas id="donut" width="500" height="260"></canvas>
+              </div>
+            </div>
+
+            <div class="card" style="border-radius:14px; box-shadow:none;">
+              <div class="card-h" style="border-radius:14px;">
+                <strong style="font-size:13px;">This-week breakdown</strong>
+                <span class="muted" id="barLabel">—</span>
+              </div>
+              <div class="card-b" style="padding:12px;">
+                <canvas id="bars" width="500" height="260"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <button id="btnRecap">Generate Weekly Recap (all goals)</button>
+            <div class="muted" style="margin-top:8px;">
+              Pro Tip: A goal without a Wednesday check-in is a Monday dream with a Friday surprise.
+            </div>
+          </div>
+        </div>
+      </aside>
+      </div>
+
+      <div class="foot">© <span id="year"></span> — Offline/localStorage. Export JSON for backup or moving between devices.</div>
+    </main>
+  </div>
+
+  <dialog id="dlg">
+    <div class="dlg-h">
+      <strong id="dlgTitle">Export</strong>
+      <button id="dlgClose">Close</button>
+    </div>
+    <div class="dlg-b">
+      <div class="muted" style="margin-bottom:10px;" id="dlgHint"></div>
+      <pre id="dlgContent"></pre>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+        <button id="btnCopy" class="primary">Copy</button>
+        <button id="btnDownload">Download .json</button>
+      </div>
+    </div>
+  </dialog>
+
+<script>
+(() => {
+  const STORAGE_KEY = "weekly_goal_tracker_v1";
+  const META_KEY = "weekly_goal_tracker_meta_v1";
+
+  const $ = (id) => document.getElementById(id);
+
+  const els = {
+    // Monday
+    mTitle: $("mTitle"),
+    mDesc: $("mDesc"),
+    mWeekStart: $("mWeekStart"),
+    mChampion: $("mChampion"),
+    btnAdd: $("btnAdd"),
+
+    // Filters
+    fSearch: $("fSearch"),
+    fWeek: $("fWeek"),
+    fStatus: $("fStatus"),
+
+    // List
+    goalList: $("goalList"),
+    emptyState: $("emptyState"),
+
+    // Metrics
+    kpiCompletion: $("kpiCompletion"),
+    barCompletion: $("barCompletion"),
+    kpiOpen: $("kpiOpen"),
+    kpiHint: $("kpiHint"),
+    kpiAdjust: $("kpiAdjust"),
+    donut: $("donut"),
+    bars: $("bars"),
+    donutLabel: $("donutLabel"),
+    barLabel: $("barLabel"),
+
+    // Actions
+    btnExport: $("btnExport"),
+    fileImport: $("fileImport"),
+    btnClear: $("btnClear"),
+    btnRecap: $("btnRecap"),
+
+    // Dialog
+    dlg: $("dlg"),
+    dlgTitle: $("dlgTitle"),
+    dlgHint: $("dlgHint"),
+    dlgContent: $("dlgContent"),
+    dlgClose: $("dlgClose"),
+    btnCopy: $("btnCopy"),
+    btnDownload: $("btnDownload"),
+
+    // Meta
+    lastSaved: $("lastSaved"),
+    todayTag: $("todayTag"),
+    year: $("year"),
+  };
+
+  if (els.year) els.year.textContent = new Date().getFullYear();
+
+  function nowISO(){ return new Date().toISOString(); }
+  function ymd(d){
+    const pad = (n)=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function getMondayOf(d){
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = x.getDay(); // Sun=0..Sat=6
+    const diff = (day === 0 ? -6 : 1 - day); // move to Monday
+    x.setDate(x.getDate() + diff);
+    return x;
+  }
+  function thisWeekMondayYMD(){ return ymd(getMondayOf(new Date())); }
+  function lastWeekMondayYMD(){
+    const m = getMondayOf(new Date());
+    m.setDate(m.getDate() - 7);
+    return ymd(m);
+  }
+  function fmtShort(iso){
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month:"short", day:"2-digit" });
+  }
+  function safeTrim(s){ return String(s || "").trim(); }
+
+  function load(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const goals = raw ? JSON.parse(raw) : [];
+    const metaRaw = localStorage.getItem(META_KEY);
+    const meta = metaRaw ? JSON.parse(metaRaw) : { lastSaved: null };
+    return { goals, meta };
+  }
+  function save(goals){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(goals));
+    const meta = { lastSaved: nowISO() };
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+    els.lastSaved.textContent = `Saved: ${new Date(meta.lastSaved).toLocaleString()}`;
+  }
+
+  // Unique per week = weekStartDate + goalTitle
+  function makeKey(weekStartDate, goalTitle){
+    return `${weekStartDate}__${goalTitle.toLowerCase()}`;
+  }
+
+  function addMonday(){
+    const title = safeTrim(els.mTitle.value);
+    const desc = safeTrim(els.mDesc.value);
+    const weekStart = els.mWeekStart.value || thisWeekMondayYMD();
+    const champion = safeTrim(els.mChampion.value);
+
+    if (!title){ els.mTitle.focus(); return; }
+
+    const { goals } = load();
+    const key = makeKey(weekStart, title);
+
+    if (goals.some(g => g.key === key)){
+      alert("That Goal Title already exists for this Week Start Date.\n(Unique = Monday/week + Goal Title)");
+      return;
+    }
+
+    goals.unshift({
+      key,
+      monday: {
+        goalTitle: title,
+        description: desc,
+        weekStartDate: weekStart,
+        champion: champion
+      },
+      wednesday: {
+        goalTitle: title,
+        checkinSummary: "",
+        checkinDate: "",
+        progressSummary: "",
+        needsAdjustment: "No"
+      },
+      friday: {
+        goalTitle: title,
+        recapSummary: "",
+        carryoverItems: "",
+        teamLeaderFeedback: "",
+        recapDate: "",
+        accomplishments: ""
+      },
+      createdAt: nowISO(),
+      updatedAt: nowISO()
+    });
+
+    save(goals);
+    els.mTitle.value = "";
+    els.mDesc.value = "";
+    els.mWeekStart.value = "";
+    els.mChampion.value = "";
+    render();
+  }
+
+  function updateSection(key, section, patch){
+    const { goals } = load();
+    const g = goals.find(x => x.key === key);
+    if (!g) return;
+
+    // Ensure goalTitle stays first and consistent (tidy requirement)
+    if (patch.goalTitle && patch.goalTitle !== g.monday.goalTitle){
+      // rename across sections + re-key
+      const newTitle = safeTrim(patch.goalTitle) || g.monday.goalTitle;
+      const weekStart = g.monday.weekStartDate;
+      const newKey = makeKey(weekStart, newTitle);
+      if (newKey !== key && goals.some(x => x.key === newKey)){
+        alert("Rename blocked: that Goal Title already exists for this Monday/week.");
+        return;
+      }
+      g.monday.goalTitle = newTitle;
+      g.wednesday.goalTitle = newTitle;
+      g.friday.goalTitle = newTitle;
+      g.key = newKey;
+      key = newKey; // update caller scope
+    }
+
+    Object.assign(g[section], patch);
+    g.updatedAt = nowISO();
+    save(goals);
+    render();
+  }
+
+  function deleteGoal(key){
+    const ok = confirm("Delete this goal (all Mon/Wed/Fri entries)?");
+    if (!ok) return;
+    const { goals } = load();
+    save(goals.filter(g => g.key !== key));
+    render();
+  }
+
+  function statusFor(g){
+    const wedDone = !!safeTrim(g.wednesday.checkinSummary) || !!safeTrim(g.wednesday.progressSummary) || !!g.wednesday.checkinDate;
+    const friDone = !!safeTrim(g.friday.recapSummary) || !!safeTrim(g.friday.accomplishments) || !!g.friday.recapDate;
+    if (wedDone && friDone) return "complete";
+    if (!wedDone) return "needs_wed";
+    return "needs_fri";
+  }
+
+  function pillsFor(g){
+    const st = statusFor(g);
+    const p = [];
+    p.push({ text: `Week: ${g.monday.weekStartDate}`, cls:"" });
+    p.push({ text: `Champion: ${g.monday.champion || "—"}`, cls:"" });
+
+    if (st === "complete") p.push({ text: "Mon/Wed/Fri complete", cls:"good" });
+    if (st === "needs_wed") p.push({ text: "Needs Wednesday", cls:"warn" });
+    if (st === "needs_fri") p.push({ text: "Needs Friday", cls:"warn" });
+
+    const adj = (g.wednesday.needsAdjustment || "No").toLowerCase() === "yes";
+    if (adj) p.push({ text: "Needs adjustment: YES", cls:"bad" });
+
+    const upd = new Date(g.updatedAt).toLocaleDateString();
+    p.push({ text: `Updated: ${upd}`, cls:"" });
+
+    return p;
+  }
+
+  function filtered(goals){
+    const q = safeTrim(els.fSearch.value).toLowerCase();
+    const wk = els.fWeek.value;
+    const st = els.fStatus.value;
+
+    let out = goals.slice();
+
+    if (q){
+      out = out.filter(g => {
+        const blob = JSON.stringify(g).toLowerCase();
+        return blob.includes(q);
+      });
+    }
+
+    if (wk !== "all"){
+      const target = wk === "this" ? thisWeekMondayYMD() : lastWeekMondayYMD();
+      out = out.filter(g => g.monday.weekStartDate === target);
+    }
+
+    if (st !== "all"){
+      out = out.filter(g => statusFor(g) === st);
+    }
+
+    // newest updated first
+    out.sort((a,b)=> new Date(b.updatedAt) - new Date(a.updatedAt));
+    return out;
+  }
+
+  function renderList(goals){
+    els.goalList.innerHTML = "";
+    const out = filtered(goals);
+    els.emptyState.style.display = out.length ? "none" : "block";
+
+    for (const g of out){
+      const div = document.createElement("div");
+      div.className = "goal";
+
+      // top row: title + actions
+      const top = document.createElement("div");
+      top.className = "goal-top";
+
+      const left = document.createElement("div");
+      const h = document.createElement("h3");
+      h.textContent = g.monday.goalTitle; // Goal Title always first
+      const p = document.createElement("p");
+      p.textContent = g.monday.description || "";
+      left.append(h,p);
+
+      const acts = document.createElement("div");
+      acts.className = "goal-actions";
+      const btnRename = document.createElement("button");
+      btnRename.textContent = "Rename";
+      btnRename.addEventListener("click", () => {
+        const nt = prompt("New Goal Title (unique for this Monday/week):", g.monday.goalTitle);
+        if (nt === null) return;
+        updateSection(g.key, "monday", { goalTitle: nt });
+      });
+
+      const btnDelete = document.createElement("button");
+      btnDelete.textContent = "Delete";
+      btnDelete.addEventListener("click", () => deleteGoal(g.key));
+
+      acts.append(btnRename, btnDelete);
+
+      top.append(left, acts);
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      for (const pill of pillsFor(g)){
+        const s = document.createElement("span");
+        s.className = "pill " + (pill.cls || "");
+        s.textContent = pill.text;
+        meta.append(s);
+      }
+
+      // Monday details
+      const dMon = document.createElement("details");
+      dMon.open = false;
+      const sMon = document.createElement("summary");
+      sMon.innerHTML = `<span><strong>Monday</strong> - Plan</span><span class="muted">Week start: ${g.monday.weekStartDate}</span>`;
+      const mon = document.createElement("div");
+      mon.className = "section";
+      const idBase = 'g-' + idSafe(g.key);
+      mon.innerHTML = `
+        <div class="row3">
+          <div>
+            <label class="muted" for="${idBase}-m-goalTitle">Goal Title (first)</label>
+            <input id="${idBase}-m-goalTitle" value="${escapeHtml(g.monday.goalTitle)}" data-k="goalTitle" />
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-m-weekStartDate">Week start date</label>
+            <input id="${idBase}-m-weekStartDate" type="date" value="${escapeHtml(g.monday.weekStartDate)}" data-k="weekStartDate" />
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-m-champion">Success Driver Champion</label>
+            <input id="${idBase}-m-champion" value="${escapeHtml(g.monday.champion || "")}" data-k="champion" />
+          </div>
+        </div>
+        <div>
+          <label class="muted" for="${idBase}-m-description">Description / high-level overview</label>
+          <textarea id="${idBase}-m-description" data-k="description">${escapeHtml(g.monday.description || "")}</textarea>
+        </div>
+        <button class="primary" data-save="monday">Save Monday</button>
+      `;
+      dMon.append(sMon, mon);
+
+      // Wednesday details
+      const dWed = document.createElement("details");
+      dWed.open = false;
+      const sWed = document.createElement("summary");
+      const adj = (g.wednesday.needsAdjustment || "No").toLowerCase() === "yes" ? "• Needs adjustment: YES" : "";
+      sWed.innerHTML = `<span><strong>Wednesday</strong> - Check-in</span><span class="muted">${g.wednesday.checkinDate ? "Check-in: "+g.wednesday.checkinDate : "—"} ${adj}</span>`;
+      const wed = document.createElement("div");
+      wed.className = "section";
+      wed.innerHTML = `
+        <div class="row5">
+          <div>
+            <label class="muted" for="${idBase}-w-goalTitle">Goal Title (first)</label>
+            <input id="${idBase}-w-goalTitle" value="${escapeHtml(g.wednesday.goalTitle)}" data-k="goalTitle" />
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-w-checkinDate">Check-in date</label>
+            <input id="${idBase}-w-checkinDate" type="date" value="${escapeHtml(g.wednesday.checkinDate || "")}" data-k="checkinDate" />
+          </div>
+          <div style="grid-column: span 3;">
+            <label class="muted" for="${idBase}-w-checkinSummary">Check-in summary</label>
+            <input id="${idBase}-w-checkinSummary" value="${escapeHtml(g.wednesday.checkinSummary || "")}" data-k="checkinSummary" />
+          </div>
+        </div>
+        <div class="row3">
+          <div style="grid-column: span 2;">
+            <label class="muted" for="${idBase}-w-progressSummary">Progress summary</label>
+            <textarea id="${idBase}-w-progressSummary" data-k="progressSummary">${escapeHtml(g.wednesday.progressSummary || "")}</textarea>
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-w-needsAdjustment">Needs adjustment?</label>
+            <select id="${idBase}-w-needsAdjustment" data-k="needsAdjustment">
+              <option ${sel(g.wednesday.needsAdjustment,"No")}>No</option>
+              <option ${sel(g.wednesday.needsAdjustment,"Yes")}>Yes</option>
+            </select>
+          </div>
+        </div>
+        <button class="primary" data-save="wednesday">Save Wednesday</button>
+      `;
+      dWed.append(sWed, wed);
+
+      // Friday details
+      const dFri = document.createElement("details");
+      dFri.open = false;
+      const sFri = document.createElement("summary");
+      sFri.innerHTML = `<span><strong>Friday</strong> - Recap</span><span class="muted">${g.friday.recapDate ? "Recap: "+g.friday.recapDate : "—"}</span>`;
+      const fri = document.createElement("div");
+      fri.className = "section";
+      fri.innerHTML = `
+        <div class="row5">
+          <div>
+            <label class="muted" for="${idBase}-f-goalTitle">Goal Title (first)</label>
+            <input id="${idBase}-f-goalTitle" value="${escapeHtml(g.friday.goalTitle)}" data-k="goalTitle" />
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-f-recapDate">Recap date</label>
+            <input id="${idBase}-f-recapDate" type="date" value="${escapeHtml(g.friday.recapDate || "")}" data-k="recapDate" />
+          </div>
+          <div style="grid-column: span 3;">
+            <label class="muted" for="${idBase}-f-recapSummary">Recap summary</label>
+            <input id="${idBase}-f-recapSummary" value="${escapeHtml(g.friday.recapSummary || "")}" data-k="recapSummary" />
+          </div>
+        </div>
+        <div class="row3">
+          <div>
+            <label class="muted" for="${idBase}-f-accomplishments">Accomplishments</label>
+            <textarea id="${idBase}-f-accomplishments" data-k="accomplishments">${escapeHtml(g.friday.accomplishments || "")}</textarea>
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-f-carryoverItems">Carryover items</label>
+            <textarea id="${idBase}-f-carryoverItems" data-k="carryoverItems">${escapeHtml(g.friday.carryoverItems || "")}</textarea>
+          </div>
+          <div>
+            <label class="muted" for="${idBase}-f-teamLeaderFeedback">Team leader feedback</label>
+            <textarea id="${idBase}-f-teamLeaderFeedback" data-k="teamLeaderFeedback">${escapeHtml(g.friday.teamLeaderFeedback || "")}</textarea>
+          </div>
+        </div>
+        <button class="primary" data-save="friday">Save Friday</button>
+      `;
+      dFri.append(sFri, fri);
+
+      // Wire save buttons per goal card
+      div.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-save]");
+        if (!btn) return;
+        const section = btn.getAttribute("data-save");
+        const sectionEl = btn.closest(".section");
+        const patch = {};
+        sectionEl.querySelectorAll("input[data-k], textarea[data-k], select[data-k]").forEach(inp => {
+          patch[inp.getAttribute("data-k")] = inp.value;
+        });
+
+        // Special: if weekStartDate changes on Monday, that impacts uniqueness key
+        if (section === "monday") {
+          const { goals } = load();
+          const current = goals.find(x => x.key === g.key);
+          if (!current) return;
+
+          const newTitle = safeTrim(patch.goalTitle) || current.monday.goalTitle;
+          const newWeek = patch.weekStartDate || current.monday.weekStartDate;
+          const newKey = makeKey(newWeek, newTitle);
+
+          if (newKey !== current.key && goals.some(x => x.key === newKey)) {
+            alert("Change blocked: that Goal Title already exists for that Monday/week.");
+            return;
+          }
+          // apply changes + propagate
+          current.monday.goalTitle = newTitle;
+          current.monday.description = patch.description || "";
+          current.monday.weekStartDate = newWeek;
+          current.monday.champion = patch.champion || "";
+          current.wednesday.goalTitle = newTitle;
+          current.friday.goalTitle = newTitle;
+          current.key = newKey;
+          current.updatedAt = nowISO();
+          save(goals);
+          render();
+          return;
+        }
+
+        updateSection(g.key, section, patch);
+      });
+
+      div.append(top, meta, dMon, dWed, dFri);
+      els.goalList.append(div);
+    }
+  }
+
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+  function idSafe(s){
+    return String(s||"")
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/(^-|-$)/g, '')
+      .toLowerCase();
+  }
+  function sel(current, v){
+    return (String(current||"No").toLowerCase() === v.toLowerCase()) ? "selected" : "";
+  }
+
+  // simple easing + helpers
+  function easeOutCubic(t){ return 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3); }
+  function lerp(a,b,t){ return a + (b-a) * t; }
+
+  // quote pool (365 original, unattributed one-liners)
+  const QUOTES = [
+    "Begin small. Move bravely.",
+    "Action clarifies the unclear.",
+    "Focus beats frenzy.",
+    "Ship today, improve tomorrow.",
+    "Fail fast, learn faster.",
+    "Do the work that scares you a little.",
+    "Progress is a collection of tiny wins.",
+    "Simplify to amplify.",
+    "Curiosity outruns doubt.",
+    "Practice patience, produce momentum.",
+    "Clear priorities, steady steps.",
+    "Solve the smallest problem first.",
+    "Teach to learn faster.",
+    "Risk thoughtfully, not timidly.",
+    "Ideas need action, not applause.",
+    "Start before you are ready.",
+    "Constraints create clarity.",
+    "Decide today, refine tomorrow.",
+    "Ship imperfectly, iterate intentionally.",
+    "Design for what matters most.",
+    "Measure what moves you.",
+    "Trade certainty for progress.",
+    "Small habits produce big outcomes.",
+    "Ask more questions than you answer.",
+    "Choose courage over comfort.",
+    "One more hour beats one more idea.",
+    "Make the problem smaller.",
+    "Better boundaries, better focus.",
+    "Bring clarity to complexity.",
+    "Create momentum, then scale it.",
+    "Show your work, gather feedback.",
+    "Persistence compounds results.",
+    "Adapt quickly, stay principled.",
+    "Bring simplicity to the user first.",
+    "Confidence follows competence.",
+    "Design the next obvious step.",
+    "Trade perfection for learning.",
+    "Be curious, then be decisive.",
+    "Make time for the important.",
+    "Do fewer things with excellence.",
+    "Share progress, not excuses.",
+    "Clarity beats cleverness.",
+    "Keep iterating until it's useful.",
+    "Collaboration multiplies impact.",
+    "Show up before inspiration arrives.",
+    "The plan is a hypothesis.",
+    "Courage fuels the creative process.",
+    "Build trust through consistency.",
+    "Define success in measurable steps.",
+    "Wake up to the work that matters.",
+    "Insist on useful feedback.",
+    "Be generous with your time.",
+    "Reframe constraints as opportunities.",
+    "Progress is better than perfection.",
+    "Learn in public, ship in private.",
+    "Small experiments, big learning.",
+    "Make decisions, then adapt.",
+    "Lead with questions, not answers.",
+    "Focus on outcomes, not outputs.",
+    "Do the obvious next thing.",
+    "Simplicity is an act of courage.",
+    "Clarity reduces friction.",
+    "Solve for the user, not the ego.",
+    "Be the person who finishes things.",
+    "Consistency beats intensity.",
+    "Let data inform, not dictate.",
+    "Practice humility, demand rigor.",
+    "Embrace constraints to get creative.",
+    "Energy focused produces miracles.",
+    "Say no to more to say yes to great.",
+    "Ship now, polish later.",
+    "Work quietly, let results shout.",
+    "Ideas are cheap; execution wins.",
+    "Build something people need.",
+    "Solve root causes, not symptoms.",
+    "Make the smallest useful thing.",
+    "Act with urgency and calm.",
+    "Start with empathy, end with utility.",
+    "Design decisions are commitments.",
+    "Choose progress over perfection.",
+    "Iterate until clarity emerges.",
+    "Preparation meets opportunity.",
+    "Lead by solving problems.",
+    "Perseverance turns ideas into products.",
+    "Measure to learn, not to judge.",
+    "Teach what you know, learn what you don't.",
+    "Make kindness a competitive advantage.",
+    "Seek the smallest viable experiment.",
+    "Be curious, then act decisively.",
+    "The story you build matters.",
+    "Be stubborn on vision, flexible on details.",
+    "Test assumptions, then iterate.",
+    "Create systems that scale learning.",
+    "Ask whether it improves the user.",
+    "Invest in clarity up front.",
+    "Progress requires friction — embrace it.",
+    "Simplify the decision, amplify the result.",
+    "Design for forgiveness, not blame.",
+    "Lead with curiosity, follow with action.",
+    "The work you do becomes your legacy.",
+    "Break big problems into daily tasks.",
+    "Courage + consistency = momentum.",
+    "Turn constraints into creative fuel.",
+    "Solve for impact, not vanity metrics.",
+    "A prototype beats a perfect plan.",
+    "Listen to users, not assumptions.",
+    "Create the future one prototype at a time.",
+    "Put users at the center of design.",
+    "Build feedback into your routine.",
+    "Start with the hardest assumption.",
+    "Be relentless in learning.",
+    "Small progress repeated daily wins.",
+    "Make choices that scale with you.",
+    "Turn insight into action quickly.",
+    "Be patient with growth, impatient with waste.",
+    "Start where you are, use what you have.",
+    "Clarity requires courageous cuts.",
+    "Act on what is true today.",
+    "Create more value than you capture.",
+    "Think long, act short.",
+    "Optimize for learning velocity.",
+    "Make progress visible every day.",
+    "Do less; do it better.",
+    "Design for delight, not just function.",
+    "Turn friction into insight.",
+    "Focus produces quality.",
+    "Lead by shipping small wins.",
+    "Turn curiosity into prototypes.",
+    "Be clear about your next most important step.",
+    "Momentum is built one choice at a time.",
+    "Measure progress by outcomes.",
+    "Be brave enough to start again.",
+    "Challenge your assumptions regularly.",
+    "Make the simplest decision that moves you forward.",
+    "Clarity of purpose drives better work.",
+    "Design decisions should reduce choices for users.",
+    "Create a bias for action, not approval.",
+    "Learn fast, then course-correct.",
+    "Protect your time like a scarce resource.",
+    "Seek feedback that hurts a little.",
+    "Make the small predictable and the big possible.",
+    "Progress compounds when habits stick.",
+    "Be generous with praise, ruthless with waste.",
+    "Build systems that reward learning.",
+    "Clarity over cleverness every time.",
+    "Make the next step obvious.",
+    "Start with empathy, ship with rigor.",
+    "The best way out is through the work.",
+    "Act with urgency; plan with intent.",
+    "Do what you can with what you have.",
+    "Be decisive when you have evidence.",
+    "Celebrate small wins publicly.",
+    "Keep your promises to your team.",
+    "Design for the long run, iterate now.",
+    "Protect focus like a strategic asset.",
+    "Make learning visible and repeatable.",
+    "Lead with a clear, simple why.",
+    "Prioritize ruthlessly, execute consistently.",
+    "Clarity in goals creates freedom in tactics.",
+    "Make time to reflect and adjust.",
+    "Be curious; experiment with humility.",
+    "Progress loves consistency over intensity.",
+    "Work with people who raise the bar.",
+    "Design iteratively, ship confidently.",
+    "Ask better questions to find better solutions.",
+    "Simplify decisions to accelerate execution.",
+    "Be relentless in removing friction.",
+    "Think like a beginner; act like a pro.",
+    "Momentum starts with discipline.",
+    "Be generous with your time for mentorship.",
+    "Make your schedule reflect your priorities.",
+    "Raise the minimum standard of your work.",
+    "Do the hard thing habitually.",
+    "Measure the right things, then act.",
+    "Clear trade-offs unlock better outcomes.",
+    "The best ideas are tested quickly.",
+    "Prototype early, then polish.",
+    "Act on feedback, not ego.",
+    "Design for the 80% use case first.",
+    "Be kind to your future self with good systems.",
+    "Make better decisions by staying curious.",
+    "Work that matters requires persistence.",
+    "Be bold in ambition, humble in approach.",
+    "Use constraints to clarify what's essential.",
+    "Keep the user at the heart of every decision.",
+    "Progress requires both speed and care.",
+    "Create value first, then capture value.",
+    "Start with empathy, scale with systems.",
+    "Make one measurable improvement today.",
+    "Iterate until the friction disappears.",
+    "Be consistent in the small things.",
+    "Prioritize clarity over cleverness.",
+    "Turn ideas into experiments quickly.",
+    "Seek to understand, then to be understood.",
+    "Let results, not intent, be the judge.",
+    "Improve a tiny bit every day.",
+    "Build for longevity, test for now.",
+    "Keep the long-term in short-term actions.",
+    "Create the habit of shipping value.",
+    "Measure to discover, not to defend.",
+    "Be decisive; iterate from real feedback.",
+    "Lead with clarity and follow with kindness.",
+    "Make the user experience the north star.",
+    "Invest in what makes future work easier.",
+    "Design systems that enable better choices.",
+    "Simplicity scales — complexity stalls.",
+    "Do the right work, not just busy work.",
+    "Take small bets, learn big lessons.",
+    "Create a rhythm of reflection and action.",
+    "Be accountable to outcomes, not effort.",
+    "Protect the time you need for deep work.",
+    "Lead by example; the team will follow.",
+    "Keep experiments cheap and rapid.",
+    "Make the next decision easy for your future self.",
+    "Iterate toward clarity, not away from it.",
+    "Make learning a repeatable habit.",
+    "Show your work so others can learn.",
+    "Be generous with credit, rigorous with feedback.",
+    "Lead with humility and a bias to act.",
+    "Design choices should reduce cognitive load.",
+    "Focus on the 20% that delivers 80% value.",
+    "Clear constraints create creative freedom.",
+    "Work on what you can finish next.",
+    "Make small, testable commitments.",
+    "Keep the mission visible every day.",
+    "Prioritize the work that unlocks other work.",
+    "Be consistent in the promises you keep.",
+    "Good design is thoughtful subtraction.",
+    "Start with empathy, end with impact.",
+    "Protect simplicity like a rare resource.",
+    "Think in systems, act in iterations.",
+    "Do one thing today that matters tomorrow.",
+    "Create the conditions for steady improvement.",
+    "Lead with questions; follow with experiments.",
+    "Measure to inform choices, not to justify them.",
+    "Make learning explicit and shareable.",
+    "Decisions are made with imperfect data; act.",
+    "Ship the minimal testable version first.",
+    "Be curious; then test your curiosity.",
+    "Design with empathy; deliver with rigor.",
+    "Turn strategy into small, daily actions.",
+    "Make progress visible to everyone.",
+    "Start with why, finish with how.",
+    "Create space for thoughtful iteration.",
+    "Protect focus — it is your competitive edge.",
+    "Simplify the path for others to follow.",
+    "Make small bets and scale what works.",
+    "Think long-term, act weekly.",
+    "Lead with integrity and ship with speed.",
+    "Make your work speak for itself.",
+    "Create momentum through tiny, consistent steps.",
+    "Turn friction into a measurable hypothesis.",
+    "Design to reduce cognitive overhead.",
+    "Start with a question, end with evidence.",
+    "Learn quickly, build thoughtfully.",
+    "Protect the time to do the real work.",
+    "Invest in systems that make others successful.",
+    "Take responsibility for outcomes, not just tasks.",
+    "Start every week with a clear, small goal.",
+    "Make feedback routine and actionable.",
+    "Be intentional about what you celebrate.",
+    "Design decisions are your daily product.",
+    "Be kind, be curious, be persistent.",
+    "Progress is a practice, not an event.",
+    "Solve user problems before building features.",
+    "Make the small wins inevitable.",
+    "Ship early, learn often, improve always.",
+    "The best teams are learners first.",
+    "Keep experiments cheap and informative.",
+    "Design for human attention, not obsession.",
+    "Make the mission part of daily rituals.",
+    "Start small, think big, move fast.",
+    "Make each step toward the goal visible.",
+    "Be strategic about where you spend energy.",
+    "Small decisions consistently executed win.",
+    "Keep building the muscle of shipping.",
+    "Design choices should remove rather than add.",
+    "Measure what you want to improve.",
+    "Take the smallest step that reduces uncertainty.",
+    "Lead with empathy; measure with discipline.",
+    "Do less, better, together.",
+    "Make the next right action painfully obvious.",
+    "Build systems that make good behavior default.",
+    "Progress is the compound interest of tiny wins."
+  ];
+
+  function dayOfYear(d){
+    const start = new Date(d.getFullYear(),0,0);
+    const diff = d - start + ((start.getTimezoneOffset() - d.getTimezoneOffset()) * 60 * 1000);
+    return Math.floor(diff / (1000*60*60*24));
+  }
+
+  function initLavaLamp(){
+    if (lavaLamp.inited) return;
+    const svgGroup = document.getElementById('lava-blobs');
+    if (!svgGroup) return;
+    const xmlns = 'http://www.w3.org/2000/svg';
+    const centerX = 40; // viewBox center
+    const baseY = 70;
+    // create a few slow-moving blobs
+    const blobCount = 4;
+    for (let i=0;i<blobCount;i++){
+      const c = document.createElementNS(xmlns, 'circle');
+      // make first blob a distinct red blob (grows through the week)
+      const r = (i === 0) ? (10 + Math.random()*6) : (8 + Math.random()*6);
+      c.setAttribute('r', String(r));
+      c.setAttribute('cx', String(centerX + (Math.random()*10-5)));
+      c.setAttribute('cy', String(baseY + (Math.random()*20-10)));
+      c.setAttribute('fill', (i === 0) ? '#ff4d4d' : 'url(#lavaGrad)');
+      c.setAttribute('opacity', '0.95');
+      svgGroup.appendChild(c);
+      lavaLamp.blobs.push({ el: c, cx: centerX + (Math.random()*10-5), cy: baseY + (Math.random()*20-10), r, speed: 0.00006 + Math.random()*0.00004, phase: Math.random()*Math.PI*2, ampX: 8 + Math.random()*6, ampY: 18 + Math.random()*10 });
+    }
+
+    lavaLamp.inited = true;
+    lavaLamp.lastTs = performance.now();
+    lavaLamp.rafId = requestAnimationFrame(animateLavaLamp);
+  }
+
+  function animateLavaLamp(ts){
+    const svgGroup = document.getElementById('lava-blobs');
+    if (!svgGroup) { lavaLamp.rafId = null; return; }
+    const dt = (ts - lavaLamp.lastTs)/1000;
+    lavaLamp.lastTs = ts;
+
+    // gentle breathing of blobs, slow per-blob movement (lava-lamp feel)
+    for (let i=0;i<lavaLamp.blobs.length;i++){
+      const b = lavaLamp.blobs[i];
+      b.phase += b.speed * (dt*1000);
+      const nx = b.cx + Math.cos(b.phase*0.9 + i) * b.ampX * 0.4;
+      // vertical movement influenced by global frac so blobs rise slightly as week progresses
+      const baseY = 72 - lavaLamp.frac * 20; // move slightly upward with progress
+      const ny = baseY + Math.sin(b.phase + i) * b.ampY * 0.45;
+      let nr = b.r * (0.9 + 0.1 * Math.sin(b.phase*0.7 + i));
+      // Make the first (red) blob grow as week progresses (small on Mon -> larger by Fri)
+      if (i === 0){
+        const sizeScale = lerp(0.6, 1.6, lavaLamp.frac); // scale from 60% -> 160%
+        nr = nr * sizeScale;
+      }
+      try{
+        b.el.setAttribute('cx', String(Math.round(nx)));
+        b.el.setAttribute('cy', String(Math.round(ny)));
+        b.el.setAttribute('r', String(Math.round(nr)));
+      }catch(e){}
+    }
+
+    // update percent text if present
+    const pctEl = document.getElementById('lava-percent');
+    if (pctEl) pctEl.textContent = Math.round(lavaLamp.frac * 100) + '%';
+
+    lavaLamp.rafId = requestAnimationFrame(animateLavaLamp);
+  }
+
+  function computeMetrics(goals){
+    // Each goal has 3 checkpoints: Monday always exists; Wed and Fri considered "done" if any key field filled OR date set.
+    const totalGoals = goals.length;
+    const totalCheckpoints = totalGoals * 3;
+
+    const monDone = totalGoals; // by definition, goal exists
+    const wedDone = goals.filter(g => {
+      const w = g.wednesday;
+      return !!safeTrim(w.checkinSummary) || !!safeTrim(w.progressSummary) || !!w.checkinDate;
+    }).length;
+
+    const friDone = goals.filter(g => {
+      const f = g.friday;
+      return !!safeTrim(f.recapSummary) || !!safeTrim(f.accomplishments) || !!f.recapDate;
+    }).length;
+
+    const done = monDone + wedDone + friDone;
+    const open = totalCheckpoints - done;
+
+    const pct = totalCheckpoints ? Math.round((done / totalCheckpoints) * 100) : 0;
+    els.kpiCompletion.textContent = `${pct}%`;
+    els.barCompletion.style.width = `${pct}%`;
+    els.kpiOpen.textContent = String(open);
+
+    const needsAdj = goals.filter(g => String(g.wednesday.needsAdjustment||"No").toLowerCase() === "yes").length;
+    els.kpiAdjust.textContent = String(needsAdj);
+
+    // Hint: what’s most missing?
+    const missingWed = totalGoals - wedDone;
+    const missingFri = totalGoals - friDone;
+    els.kpiHint.textContent =
+      totalGoals === 0 ? "Add a Monday goal to start." :
+      missingWed >= missingFri ? `Missing Wednesday check-ins: ${missingWed}` : `Missing Friday recaps: ${missingFri}`;
+
+    drawDonut(monDone, wedDone, friDone, totalGoals);
+    drawThisWeekBars(goals);
+    updateSandDial();
+  }
+
+  function drawDonut(monDone, wedDone, friDone, totalGoals){
+    const c = els.donut;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+
+    // Ensure high-DPI canvas scaling for crisp & scalable rendering
+    const DPR = window.devicePixelRatio || 1;
+    const displayW = c.clientWidth || 500;
+    const displayH = c.clientHeight || 260;
+    if (c.width !== Math.floor(displayW * DPR) || c.height !== Math.floor(displayH * DPR)){
+      c.width = Math.floor(displayW * DPR);
+      c.height = Math.floor(displayH * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    } else {
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+
+    const W = displayW, H = displayH;
+    ctx.clearRect(0,0,W, H);
+
+    const mon = totalGoals ? monDone/totalGoals : 0;
+    const wed = totalGoals ? wedDone/totalGoals : 0;
+    const fri = totalGoals ? friDone/totalGoals : 0;
+
+    els.donutLabel.textContent = `${totalGoals} goals • checkpoints done: Mon ${monDone}, Wed ${wedDone}, Fri ${friDone}`;
+
+    const centerX = W/2, centerY = H/2;
+    const rOuter = Math.min(W,H) * 0.34;
+    const rInner = rOuter * 0.62;
+
+    // background ring
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(255,255,255,.06)";
+    ctx.lineWidth = rOuter - rInner;
+    ctx.arc(centerX, centerY, (rOuter + rInner)/2, 0, 2*Math.PI);
+    ctx.stroke();
+
+    let a = -Math.PI/2;
+    // Monday→Friday: gentle green gradient increasing in intensity toward Friday
+    const segs = [
+      { frac: mon, colorA: "rgba(200,255,210,.95)", colorB: "rgba(220,255,230,.55)", label:"Mon" },
+      { frac: wed, colorA: "rgba(120,205,160,.95)", colorB: "rgba(160,220,180,.55)", label:"Wed" },
+      { frac: fri, colorA: "rgba(34,197,94,.95)", colorB: "rgba(80,200,120,.55)", label:"Fri" },
+    ];
+
+    for (const s of segs){
+      if (s.frac <= 0) continue;
+      ctx.beginPath();
+      // stroke with primary color
+      ctx.strokeStyle = s.colorA;
+      ctx.lineWidth = rOuter - rInner;
+      ctx.lineCap = "round";
+      ctx.arc(centerX, centerY, (rOuter + rInner)/2, a, a + s.frac * 2 * Math.PI);
+      ctx.stroke();
+      // subtle inner glow using colorB
+      ctx.beginPath();
+      ctx.strokeStyle = s.colorB;
+      ctx.lineWidth = (rOuter - rInner) * 0.38;
+      ctx.arc(centerX, centerY, (rOuter + rInner)/2, a, a + s.frac * 2 * Math.PI);
+      ctx.stroke();
+      a += s.frac * 2 * Math.PI;
+    }
+
+    // center text: overall checkpoint completion
+    const totalCheckpoints = totalGoals * 3;
+    const done = (totalGoals) + wedDone + friDone;
+    const pct = totalCheckpoints ? Math.round((done/totalCheckpoints)*100) : 0;
+
+    ctx.fillStyle = "rgba(232,240,255,.92)";
+    ctx.font = "800 36px ui-sans-serif, system-ui";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(`${pct}%`, centerX, centerY - 6);
+    // removed small caption under percentage (checkpoint completion)
+  }
+
+  function drawThisWeekBars(goals){
+    const c = els.bars;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+
+    // DPI-aware sizing
+    const DPR = window.devicePixelRatio || 1;
+    const displayW = c.clientWidth || 500;
+    const displayH = c.clientHeight || 260;
+    if (c.width !== Math.floor(displayW * DPR) || c.height !== Math.floor(displayH * DPR)){
+      c.width = Math.floor(displayW * DPR);
+      c.height = Math.floor(displayH * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    } else {
+      ctx.setTransform(1,0,0,1,0,0);
+    }
+
+    const W = displayW, H = displayH;
+    ctx.clearRect(0,0,W,H);
+
+    const thisMon = thisWeekMondayYMD();
+    const weekGoals = goals.filter(g => g.monday.weekStartDate === thisMon);
+
+    const total = weekGoals.length || 0;
+    const wed = weekGoals.filter(g => !!safeTrim(g.wednesday.checkinSummary) || !!safeTrim(g.wednesday.progressSummary) || !!g.wednesday.checkinDate).length;
+    const fri = weekGoals.filter(g => !!safeTrim(g.friday.recapSummary) || !!safeTrim(g.friday.accomplishments) || !!g.friday.recapDate).length;
+
+    els.barLabel.textContent = total ? `${total} goals this week (${thisMon})` : `No goals for ${thisMon}`;
+
+    const labels = ["Goals", "Wed → Done", "Fri → Done"];
+    const values = [total, wed, fri];
+    const max = Math.max(1, ...values);
+
+    const pad = 28;
+    const gap = (W - pad*2) / labels.length;
+    const barW = gap * 0.62;
+
+    // baseline
+    ctx.strokeStyle = "rgba(255,255,255,.08)";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad, H-44); ctx.lineTo(W-pad, H-44); ctx.stroke();
+
+    ctx.font = "600 12px ui-sans-serif, system-ui";
+    ctx.textAlign = "center";
+
+    labels.forEach((lab, i) => {
+      const x = pad + gap*i + gap/2;
+      const h = Math.round((values[i]/max) * (H - 90));
+      const y = (H - 44) - h;
+
+      // vertical gradient for each bar (top -> bottom)
+      const ggrad = ctx.createLinearGradient(x - barW/2, y, x - barW/2, y + h);
+      ggrad.addColorStop(0, 'rgba(14,165,233,0.95)');
+      ggrad.addColorStop(0.6, 'rgba(14,165,233,0.65)');
+      ggrad.addColorStop(1, 'rgba(14,165,233,0.28)');
+
+      ctx.fillStyle = ggrad;
+      ctx.fillRect(x - barW/2, y, barW, h);
+
+      ctx.fillStyle = "rgba(232,240,255,.92)";
+      ctx.fillText(String(values[i]), x, Math.max(8, y - 10));
+
+      // draw label under each bar; prefer splitting on '→' if present (e.g. "Wednesday → Done")
+      ctx.fillStyle = "rgba(147,164,191,.95)";
+      ctx.font = "600 11px ui-sans-serif, system-ui";
+      if (lab.indexOf('→') !== -1){
+        const parts = lab.split('→').map(s => s.trim());
+        ctx.fillText(parts[0], x, H - 28);
+        ctx.fillText(parts[1] || '', x, H - 12);
+      } else if (lab.indexOf(' ') !== -1){
+        const parts = lab.split(' ');
+        ctx.fillText(parts[0], x, H - 28);
+        ctx.fillText(parts.slice(1).join(' '), x, H - 12);
+      }else{
+        ctx.fillText(lab, x, H - 20);
+      }
+      // restore label font for next iteration
+      ctx.font = "600 12px ui-sans-serif, system-ui";
+    });
+  }
+
+  function updateSandDial(){
+    // repurposed: update the quote-of-the-day display based on day-of-year
+    try{
+      const now = new Date();
+      const doy = dayOfYear(now); // 1..365
+      const idx = (doy - 1) % QUOTES.length;
+      showQuote(idx, {fade:true, day:doy});
+    }catch(e){ /* swallow update errors */ }
+  }
+
+  function showQuote(idx, opts={fade:true, day:null}){
+    try{
+      const qEl = document.getElementById('quoteText');
+      const dEl = document.getElementById('quoteDay');
+      const wrapper = document.getElementById('quoteOfDay');
+      const text = QUOTES[idx] || QUOTES[0];
+      if (!qEl) return;
+      if (opts.fade){
+        qEl.style.opacity = 0;
+        qEl.style.transform = 'translateY(6px)';
+        // small delay to allow opacity->0 and reflow before changing text
+        setTimeout(()=>{
+          qEl.textContent = text;
+          qEl.style.opacity = 1;
+          qEl.style.transform = 'translateY(0)';
+        }, 70);
+      } else {
+        qEl.textContent = text;
+        qEl.style.opacity = 1;
+        qEl.style.transform = 'translateY(0)';
+      }
+      if (dEl) dEl.textContent = opts.day ? `Day ${opts.day} of ${QUOTES.length}` : `Quote`;
+      if (wrapper) wrapper.setAttribute('aria-label', `Quote: ${text}`);
+    }catch(e){}
+  }
+
+  function shuffleQuote(){
+    const idx = Math.floor(Math.random() * QUOTES.length);
+    showQuote(idx, {fade:true});
+  }
+
+  function showDialog(title, hint, content){
+    els.dlgTitle.textContent = title;
+    els.dlgHint.textContent = hint || "";
+    els.dlgContent.textContent = content || "";
+    els.dlg.showModal();
+  }
+
+  function exportJSON(){
+    const { goals } = load();
+    const payload = { version: 1, exportedAt: nowISO(), goals };
+    const text = JSON.stringify(payload, null, 2);
+    showDialog("Export JSON", "Copy or download this backup file.", text);
+  }
+
+  function downloadJSON(text){
+    const blob = new Blob([text], { type:"application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `weekly-goal-tracker-${ymd(new Date())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
+  }
+
+  async function copyToClipboard(text){
+    try { await navigator.clipboard.writeText(text); alert("TGIF Champion!"); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      ta.remove(); alert("TGIF Champion!");
+    }
+  }
+
+  function importJSONFile(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.goals)) throw new Error("Invalid file.");
+        // minimal normalization
+        const goals = data.goals.map(g => {
+          const monday = g.monday || {};
+          const title = safeTrim(monday.goalTitle || g?.wednesday?.goalTitle || g?.friday?.goalTitle || "Untitled");
+          const week = monday.weekStartDate || thisWeekMondayYMD();
+          return {
+            key: makeKey(week, title),
+            monday: {
+              goalTitle: title,
+              description: monday.description || "",
+              weekStartDate: week,
+              champion: monday.champion || ""
+            },
+            wednesday: Object.assign({
+              goalTitle: title,
+              checkinSummary: "",
+              checkinDate: "",
+              progressSummary: "",
+              needsAdjustment: "No"
+            }, g.wednesday || {}, { goalTitle: title }),
+            friday: Object.assign({
+              goalTitle: title,
+              recapSummary: "",
+              carryoverItems: "",
+              teamLeaderFeedback: "",
+              recapDate: "",
+              accomplishments: ""
+            }, g.friday || {}, { goalTitle: title }),
+            createdAt: g.createdAt || nowISO(),
+            updatedAt: nowISO()
+          };
+        });
+
+        // de-dupe by key (last one wins)
+        const map = new Map();
+        for (const g of goals) map.set(g.key, g);
+        save(Array.from(map.values()));
+        render();
+        alert("Import complete.");
+      } catch(e){
+        alert("Import failed: " + e.message);
+      } finally {
+        els.fileImport.value = "";
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function generateWeeklyRecap(){
+    const { goals } = load();
+    if (!goals.length){
+      showDialog("Weekly Recap", "Nothing to recap yet. Add a Monday goal first.", "No goals found.");
+      return;
+    }
+
+    // group by weekStartDate
+    const byWeek = {};
+    for (const g of goals){
+      const wk = g.monday.weekStartDate;
+      byWeek[wk] = byWeek[wk] || [];
+      byWeek[wk].push(g);
+    }
+    const weeks = Object.keys(byWeek).sort().reverse();
+
+    let out = `Weekly Recap (generated ${new Date().toLocaleString()})\n\n`;
+
+    for (const wk of weeks){
+      const arr = byWeek[wk];
+      out += `Week Start: ${wk}\n`;
+      out += `Goals: ${arr.length}\n\n`;
+
+      for (const g of arr){
+        out += `GOAL: ${g.monday.goalTitle}\n`;
+        out += `Champion: ${g.monday.champion || "—"}\n`;
+        if (g.monday.description) out += `Overview: ${g.monday.description}\n`;
+
+        // Wednesday
+        const w = g.wednesday;
+        const wedDone = !!safeTrim(w.checkinSummary) || !!safeTrim(w.progressSummary) || !!w.checkinDate;
+        out += `Wednesday: ${wedDone ? "✔" : "—"}\n`;
+        if (w.checkinDate) out += `  Check-in Date: ${w.checkinDate}\n`;
+        if (w.checkinSummary) out += `  Check-in Summary: ${w.checkinSummary}\n`;
+        if (w.progressSummary) out += `  Progress: ${w.progressSummary}\n`;
+        out += `  Needs Adjustment: ${w.needsAdjustment || "No"}\n`;
+
+        // Friday
+        const f = g.friday;
+        const friDone = !!safeTrim(f.recapSummary) || !!safeTrim(f.accomplishments) || !!f.recapDate;
+        out += `Friday: ${friDone ? "✔" : "—"}\n`;
+        if (f.recapDate) out += `  Recap Date: ${f.recapDate}\n`;
+        if (f.accomplishments) out += `  Accomplishments: ${f.accomplishments}\n`;
+        if (f.recapSummary) out += `  Recap Summary: ${f.recapSummary}\n`;
+        if (f.carryoverItems) out += `  Carryover Items: ${f.carryoverItems}\n`;
+        if (f.teamLeaderFeedback) out += `  Team Leader Feedback: ${f.teamLeaderFeedback}\n`;
+
+        out += `\n`;
+      }
+      out += `— — —\n\n`;
+    }
+
+    showDialog("Weekly Recap", "Copy this into your Friday wrap-up / performance review notes.", out);
+  }
+
+  function resetAll(){
+    const ok = confirm("Reset everything? This clears all stored goals in this browser.");
+    if (!ok) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(META_KEY);
+    render();
+  }
+
+  function render(){
+    const { goals, meta } = load();
+    els.lastSaved.textContent = meta.lastSaved ? `Saved: ${new Date(meta.lastSaved).toLocaleString()}` : "Not saved yet";
+    els.todayTag.textContent = new Date().toLocaleDateString(undefined, { weekday:"short", year:"numeric", month:"short", day:"2-digit" });
+
+    renderList(goals);
+    computeMetrics(goals);
+  }
+
+  // wire events
+  els.btnAdd.addEventListener("click", addMonday);
+  els.mTitle.addEventListener("keydown", (e)=>{ if (e.key==="Enter") addMonday(); });
+
+  ["fSearch","fWeek","fStatus"].forEach(id=>{
+    els[id].addEventListener("input", render);
+    els[id].addEventListener("change", render);
+  });
+
+  els.btnExport.addEventListener("click", exportJSON);
+  els.fileImport.addEventListener("change", (e)=>{
+    const f = e.target.files && e.target.files[0];
+    if (f) importJSONFile(f);
+  });
+  els.btnClear.addEventListener("click", resetAll);
+  els.btnRecap.addEventListener("click", generateWeeklyRecap);
+
+  els.dlgClose.addEventListener("click", ()=>els.dlg.close());
+  els.btnCopy.addEventListener("click", ()=>copyToClipboard(els.dlgContent.textContent));
+  els.btnDownload.addEventListener("click", ()=>downloadJSON(els.dlgContent.textContent));
+
+  // Shuffle button for quote-of-the-day
+  const btnShuffle = document.getElementById('btnShuffle');
+  if (btnShuffle) btnShuffle.addEventListener('click', shuffleQuote);
+
+  // default week start to this Monday for convenience
+  els.mWeekStart.value = thisWeekMondayYMD();
+
+  render();
+
+  // Align minute updates: update at the next minute boundary, then every minute.
+  (function scheduleLampMinute(){
+    const now = new Date();
+    const msToNextMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    setTimeout(() => {
+      try{ updateSandDial(); } catch(e){}
+      setInterval(() => { try{ updateSandDial(); } catch(e){} }, 60 * 1000);
+    }, msToNextMinute);
+  })();
+})();
+</script>
+</body>
+</html>
